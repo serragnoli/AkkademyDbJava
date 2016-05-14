@@ -20,5 +20,8 @@ public class RememberLastTextActorTest {
 
         final RememberLastTextActor rememberLastTextActor = actorRef.underlyingActor();
         assertThat(rememberLastTextActor.getLastText()).isEqualTo("Text 1");
+
+        actorRef.tell(new RememberMe("Text 2"), ActorRef.noSender());
+        assertThat(rememberLastTextActor.getLastText()).isEqualTo("Text 2");
     }
 }
