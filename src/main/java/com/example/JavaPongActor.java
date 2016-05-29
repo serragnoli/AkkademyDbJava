@@ -7,6 +7,8 @@ import akka.japi.pf.ReceiveBuilder;
 import scala.PartialFunction;
 import scala.runtime.BoxedUnit;
 
+import java.util.concurrent.CompletionStage;
+
 public class JavaPongActor extends AbstractActor {
 
     @Override
