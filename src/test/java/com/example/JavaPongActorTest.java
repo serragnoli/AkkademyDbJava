@@ -8,12 +8,14 @@ import org.junit.Test;
 import scala.concurrent.Future;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static akka.pattern.Patterns.ask;
+import static java.lang.String.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static scala.compat.java8.FutureConverters.toJava;
 
@@ -23,10 +25,9 @@ public class JavaPongActorTest {
 
     @Test
     public void should_reply_to_ping_with_pong() throws Exception {
-        final CompletionStage<String> cs = askPong("Ping");
-        final CompletableFuture<String> jFuture = (CompletableFuture<String>) cs;
+        final CompletableFuture<String> cs = askPong("Ping");
 
-        assertThat(jFuture.get(1000, TimeUnit.MILLISECONDS)).isEqualTo("Pong");
+        assertThat(cs.get(1000, TimeUnit.MILLISECONDS)).isEqualTo("Pong");
     }
 
     @Test
@@ -37,19 +38,24 @@ public class JavaPongActorTest {
     }
 
     @Test
-    public void shouldReturnFirstChar() {
-        askPong("Ping")
-                .thenApply(x -> x.charAt(0));
+    public void shouldReturnFirstChar() throws InterruptedException, ExecutionException, TimeoutException {
+        final CompletableFuture<String> pong = askPong("Ping")
+                .thenApply(x -> valueOf(x.charAt(0)));
+
+        System.out.println("shouldReturnFirstChar: " + pong.get(1000, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void shouldTranformTheResultAsynchronously() {
+    public void shouldTranformTheResultAsynchronously() throws InterruptedException, ExecutionException, TimeoutException {
         //thenCompose: flattens CompletionState[CompletionStage[String]]
-        final CompletionStage<String> cs = askPong("Ping").thenCompose(x -> askPong("Ping"));
+        final CompletableFuture<String> pong = askPong("Ping")
+                .thenCompose(x -> askPong("Ping"));
+
+        System.out.println("shouldTranformTheResultAsynchronously: " + pong.get(1000, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void shouldHandleFailure() {
+    public void shouldHandleFailure() throws InterruptedException, ExecutionException, TimeoutException {
         BiFunction<String, Throwable, Object> throwableByString = (s, t) -> {
             if (t != null) {
                 System.out.println("Error: " + t);
@@ -57,26 +63,59 @@ public class JavaPongActorTest {
             return null;
         };
 
-        askPong("causeError").handle(throwableByString);
+        final CompletableFuture<Object> pong = askPong("causeError")
+                .handle(throwableByString);
+
+        System.out.println("shouldHandleFailure: " + pong.get(1000, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void shouldRecoverFromFailure() {
+    public void shouldRecoverFromFailure() throws InterruptedException, ExecutionException, TimeoutException {
         final Function<Throwable, String> alwaysDefaultFunction = t -> "default";
 
-        askPong("causeError").exceptionally(alwaysDefaultFunction);
+        final CompletableFuture<String> pong = askPong("causeError")
+                .exceptionally(alwaysDefaultFunction);
+
+        System.out.println("shouldRecoverFromFailure: " + pong.get(1000, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void shouldRecoverFromFailureAsynchronously() {
-        askPong("causeError")
-                .handle((pong, exception) -> exception == null ? CompletableFuture.completedFuture(pong) : askPong("Ping"))
+    public void shouldRecoverFromFailureAsynchronously() throws InterruptedException, ExecutionException, TimeoutException {
+        final CompletableFuture<String> pong = askPong("causeError")
+                .handle((result, exception) -> exception == null
+                        ? CompletableFuture.completedFuture(result)
+                        : askPong("Ping"))
                 .thenCompose(x -> x);
+
+        System.out.println("shouldRecoverFromFailureAsynchronously: " + pong.get(1000, TimeUnit.MILLISECONDS));
     }
 
-    private CompletionStage<String> askPong(String msg) {
+    @Test
+    public void shouldChainOperationsTogether() throws InterruptedException, ExecutionException, TimeoutException {
+        final CompletableFuture<String> pong = askPong("Ping")
+                .thenCompose(x -> askPong("Ping" + x))
+                .handle((x, throwable) -> {
+                    if (throwable == null) {
+                        return x;
+                    }
+                    return "default";
+                });
+
+        System.out.println("shouldChainOperationsTogether: " + pong.get(1000, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void shouldCombineTwoFuturesTogether() throws InterruptedException, ExecutionException, TimeoutException {
+        final CompletableFuture<String> pong = askPong("Ping")
+                .thenCombine(askPong("Ping"), (firstResult, secondResult) -> firstResult + secondResult);
+
+        System.out.println("shouldCombineTwoFuturesTogether: " + pong.get(1000, TimeUnit.MILLISECONDS));
+    }
+
+    @SuppressWarnings("unchecked")
+    private CompletableFuture<String> askPong(String msg) {
         Future sFuture = ask(actorRef, msg, 1000);
-        return toJava(sFuture);
+        return (CompletableFuture<String>) toJava(sFuture);
     }
 
 }
