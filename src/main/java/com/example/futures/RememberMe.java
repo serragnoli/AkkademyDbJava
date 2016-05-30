@@ -1,4 +1,4 @@
-package com.example;
+package com.example.futures;
 
 public class RememberMe {
 

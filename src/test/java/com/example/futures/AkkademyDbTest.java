@@ -1,9 +1,11 @@
-package com.example;
+package com.example.futures;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
+import com.example.futures.AkkademyDb;
+import com.example.futures.SetRequest;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

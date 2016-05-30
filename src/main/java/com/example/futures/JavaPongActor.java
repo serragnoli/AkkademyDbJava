@@ -1,4 +1,4 @@
-package com.example;
+package com.example.futures;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;

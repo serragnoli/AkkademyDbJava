@@ -1,4 +1,4 @@
-package com.example;
+package com.example.futures;
 
 import static org.junit.Assert.assertTrue;
 

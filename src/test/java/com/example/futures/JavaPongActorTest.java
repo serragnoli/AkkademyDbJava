@@ -1,9 +1,10 @@
-package com.example;
+package com.example.futures;
 
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import com.example.futures.JavaPongActor;
 import org.junit.Test;
 import scala.concurrent.Future;
 
